@@ -16,7 +16,7 @@ import { DeterministicOptions } from "../types/options";
 config();
 
 const ENV_KEY = process.env.DEPLOYMENT_ENV as string;
-const RPC_URL = process.env[`RPC_URL_${ENV_KEY}`] as string;
+const RPC_URL = process.env[`RPC_PROVIDER_${ENV_KEY}`] as string;
 const DEPLOYER_ADDR = process.env[`DEPLOYER_${ENV_KEY}`] as string;
 const DEPLOYER_PK = process.env[`DEPLOYER_PK_${ENV_KEY}`] as string;
 const CHAIN_ID = hre.network.config.chainId as number;

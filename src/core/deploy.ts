@@ -1,5 +1,6 @@
 import "@openzeppelin/hardhat-upgrades";
 import hre from "hardhat";
+import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { StandaloneOptions } from "@openzeppelin/hardhat-upgrades/dist/utils/options";
 import { DefaultProxyOptions, DefaultBeaconOptions } from "./env";
 import { DeployHelpers } from "../libs/deployHelpers";
@@ -13,16 +14,19 @@ import { Contract, ContractFactory } from "ethers";
 import { ContractHelpers } from "../libs/contractHelpers";
 import { FunctionArgs } from "../types/abi";
 
-export async function deploy({
-	contractName,
-	initializationArgs = [],
-	isUpgradeable = false,
-	implConstructorArgs = [],
-	implForceDeploy = false,
-	writeDeploymentResult = true,
-	gasLimit = 0,
-	deterministicOptions = undefined,
-}: DeployOptions): Promise<Contract> {
+export async function deploy(
+	hre: HardhatRuntimeEnvironment,
+	{
+		contractName,
+		initializationArgs = [],
+		isUpgradeable = false,
+		implConstructorArgs = [],
+		implForceDeploy = false,
+		writeDeploymentResult = true,
+		gasLimit = 0,
+		deterministicOptions = undefined,
+	}: DeployOptions,
+): Promise<Contract> {
 	const [deployer] = await hre.ethers.getSigners();
 
 	await DeployHelpers.printDeploymentTime(deployer);
@@ -39,12 +43,12 @@ export async function deploy({
 	}
 
 	const proxyOptions: StandaloneOptions = getDeploymentOptions(
-        isUpgradeable,
-        implConstructorArgs,
-        implForceDeploy,
-        feeOverridingOpts,
-        deterministicOptions,
-    )
+		isUpgradeable,
+		implConstructorArgs,
+		implForceDeploy,
+		feeOverridingOpts,
+		deterministicOptions,
+	);
 
 	// Deploy contract
 	const deployedContract = await deployContract(
@@ -76,11 +80,14 @@ export async function deploy({
 	return deployedContract;
 }
 
-export async function deployBeacon({
-	contractName,
-	implConstructorArgs = [],
-	implForceDeploy = false,
-}: DeployBeaconOptions): Promise<Contract> {
+export async function deployBeacon(
+	hre: HardhatRuntimeEnvironment,
+	{
+		contractName,
+		implConstructorArgs = [],
+		implForceDeploy = false,
+	}: DeployBeaconOptions,
+): Promise<Contract> {
 	const [deployer] = await hre.ethers.getSigners();
 
 	await DeployHelpers.printDeploymentTime(deployer);
