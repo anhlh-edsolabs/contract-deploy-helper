@@ -18,7 +18,8 @@ import { ContractHelpers } from "./contractHelpers";
 import { DeterministicOptions, FeeOverridingOptions } from "../types/options";
 
 import UpgradeableBeaconABI from "../core/abis/UpgradeableBeacon_ABI.json";
-import { FunctionArgs } from "../types/abi";
+import { Address, FunctionArgs } from "../types/abi";
+import path from "path";
 
 async function printDeploymentTime(
 	deployer: Wallet | HardhatEthersSigner,
@@ -43,7 +44,7 @@ async function printDeploymentTime(
 async function printDeploymentResult(
 	deployer: Wallet | HardhatEthersSigner,
 	contractName: string,
-	contractAddress: string,
+	contractAddress: Address,
 	isUpgrade = false,
 	isBeacon = false,
 ): Promise<string> {
@@ -107,10 +108,6 @@ async function writeDeploymentResult(
 	const envKey = Constants.ENV_KEY;
 	const envData = DeploymentStorage.Env[envKey] || {};
 
-	// DeploymentStorage.Env[Constants.ENV_KEY] =
-	// 	DeploymentStorage.Env[Constants.ENV_KEY] !== undefined
-	// 		? DeploymentStorage.Env[Constants.ENV_KEY]
-	// 		: {};
 	if (isProxyUpgrade) {
 		if (contractName != previousContractName) {
 			// deep cloning the object for previous contract
@@ -155,15 +152,25 @@ async function writeDeploymentResult(
 	DeploymentStorage.Env[envKey] = envData;
 
 	try {
+		// Check if the file exists and create it if it doesn't.
+		await fs.promises.access(DeploymentStorage.File, fs.constants.F_OK);
+	} catch {
+        // Create the directory if it doesn't exist
+        await fs.promises.mkdir(path.dirname(DeploymentStorage.File), { recursive: true });
+		// Create the file if it doesn't exist
+		await fs.promises.writeFile(DeploymentStorage.File, "{}");
+		log(
+			`Deployment data file ${DeploymentStorage.File} has been created.\n\r`,
+		);
+	} finally {
 		await fs.promises.writeFile(
 			DeploymentStorage.File,
 			JSON.stringify(DeploymentStorage.Env, null, "\t"),
 		);
+
 		log(
 			`Deployment data has been written to ${DeploymentStorage.File}.\n\r`,
 		);
-	} catch (err) {
-		log(`Error when writing to ${DeploymentStorage.File}.\n\r`, err);
 	}
 }
 
@@ -250,28 +257,23 @@ async function estimateDeploy(
 function getDeterministicOptions(
 	deterministicOpt: DeterministicOptions = {} as DeterministicOptions,
 ): DeterministicOptions {
-	if (!deterministicOpt) return { useDeterministicDeployment: false };
-
-	const {
-		useDeterministicDeployment = false,
-		useCreate2Deploy,
-		salt,
-	} = deterministicOpt;
-
-	const options = {
-		useDeterministicDeployment,
-		useCreate2Deploy: useCreate2Deploy ?? false,
-		salt,
-	};
-
-	if (useDeterministicDeployment && useCreate2Deploy) {
-		options.salt = salt ?? DefaultDeterministicOptions.salt;
+	if (!deterministicOpt || !deterministicOpt.useDeterministicDeployment) {
+		return { useDeterministicDeployment: false };
 	}
 
-	return options as DeterministicOptions;
+	const {
+		useCreate2Deploy = false,
+		salt = DefaultDeterministicOptions.salt,
+	} = deterministicOpt;
+
+	return {
+		useDeterministicDeployment: true,
+		useCreate2Deploy,
+		salt,
+	};
 }
 
-async function getImplementationAddress(proxyAddress: string): Promise<string> {
+async function getImplementationAddress(proxyAddress: Address): Promise<Address> {
 	const impl = await Provider.getStorage(
 		proxyAddress,
 		ContractHelpers.erc1967Slot.Implementation(),

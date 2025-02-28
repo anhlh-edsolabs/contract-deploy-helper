@@ -23,3 +23,5 @@ export type FunctionArgs = (
 	| boolean
 	| any[]
 )[];
+
+export type Address = `0x${string}`;
