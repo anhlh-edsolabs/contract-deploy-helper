@@ -1,10 +1,12 @@
-import "@nomicfoundation/hardhat-ethers";
-import hre from "hardhat";
 import fs from "fs";
+import path from "path";
 import chalk from "chalk";
+
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { ethers, Wallet, ContractFactory } from "ethers";
 import { log } from "console";
+
+import hre from "../core/core";
 
 import {
 	Constants,
@@ -12,6 +14,7 @@ import {
 	Provider,
 	DeploymentStorage,
 	DefaultDeterministicOptions,
+	DefaultProxyOptions,
 } from "../core/env";
 
 import { ContractHelpers } from "./contractHelpers";
@@ -19,7 +22,7 @@ import { DeterministicOptions, FeeOverridingOptions } from "../types/options";
 
 import UpgradeableBeaconABI from "../core/abis/UpgradeableBeacon_ABI.json";
 import { Address, FunctionArgs } from "../types/abi";
-import path from "path";
+import { StandaloneOptions } from "@openzeppelin/hardhat-upgrades/dist/utils/options";
 
 async function printDeploymentTime(
 	deployer: Wallet | HardhatEthersSigner,
@@ -41,59 +44,146 @@ async function printDeploymentTime(
 	log("====================================================\n\r");
 }
 
-async function printDeploymentResult(
+async function printProxyUpgradeInfo(
+	proxyAddress: Address,
+	contractIdentifier: string,
+): Promise<Address> {
+	const impl = await getImplementationAddress(proxyAddress);
+	log(
+		`Upgrading ${chalk.bold.blue(
+			contractIdentifier,
+		)} proxy at ${chalk.bold.red(
+			proxyAddress,
+		)} with implementation at ${chalk.bold.yellow(impl)}`,
+	);
+
+	return impl;
+}
+
+async function getDeploymentResult(
 	deployer: Wallet | HardhatEthersSigner,
 	contractName: string,
 	contractAddress: Address,
-	isUpgrade = false,
-	isBeacon = false,
-): Promise<string> {
+	isUpgrade?: boolean,
+	isBeacon?: boolean,
+): Promise<Address> {
 	// wait for 3 seconds before fetching the implementation address
 	await sleep(3000);
 
-	let impl = contractAddress;
+	let implementationAddress = contractAddress;
+	if (isUpgrade) {
+		implementationAddress = isBeacon
+			? await getBeaconImplementationAddress(contractAddress, deployer)
+			: await getImplementationAddress(contractAddress);
+	}
 
+	await logDeploymentResult(
+		contractName,
+		deployer.address as Address,
+		contractAddress,
+		implementationAddress,
+		isUpgrade,
+		isBeacon,
+	);
+
+	return implementationAddress;
+}
+
+async function logDeploymentResult(
+	contractName: string,
+	deployerAddress: Address,
+	contractAddress: Address,
+	implementationAddress: Address,
+	isUpgrade?: boolean,
+	isBeacon?: boolean,
+): Promise<void> {
 	log("====================================================");
 	log("COMPLETED.");
+
 	if (isUpgrade) {
 		if (!isBeacon) {
-			impl = await getImplementationAddress(contractAddress);
 			log(
 				`- ${chalk.bold.blue(
 					contractName,
 				)} proxy address: ${chalk.bold.red(contractAddress)}`,
 			);
 		} else {
-			const beaconContract = new ethers.Contract(
-				contractAddress,
-				UpgradeableBeaconABI,
-				deployer,
-			);
-			impl = await beaconContract.implementation();
 			log(
 				`- ${chalk.bold.blue(
 					contractName,
 				)} beacon address: ${chalk.bold.red(contractAddress)}`,
 			);
 		}
-		log("- Implementation:", chalk.bold.yellow(impl));
+		log("- Implementation: ", chalk.bold.yellow(implementationAddress));
 	} else {
 		log(
 			`- ${chalk.bold.blue(contractName)} address: ${chalk.bold.yellow(
-				impl,
+				contractAddress,
 			)}`,
 		);
 	}
 	log(
-		"- Account balance after deployment: ",
+		" - Account balance after deployment: ",
 		chalk.bold.yellowBright(
-			ethers.formatEther(await Provider.getBalance(deployer.address)),
+			ethers.formatEther(await Provider.getBalance(deployerAddress)),
 		),
 	);
 	log("====================================================");
-
-	return impl;
 }
+
+// async function printDeploymentResult(
+// 	deployer: Wallet | HardhatEthersSigner,
+// 	contractName: string,
+// 	contractAddress: Address,
+// 	isUpgrade = false,
+// 	isBeacon = false,
+// ): Promise<string> {
+// 	// wait for 3 seconds before fetching the implementation address
+// 	await sleep(3000);
+
+// 	let impl = contractAddress;
+
+// 	log("====================================================");
+// 	log("COMPLETED.");
+// 	if (isUpgrade) {
+// 		if (!isBeacon) {
+// 			impl = await getImplementationAddress(contractAddress);
+// 			log(
+// 				`- ${chalk.bold.blue(
+// 					contractName,
+// 				)} proxy address: ${chalk.bold.red(contractAddress)}`,
+// 			);
+// 		} else {
+// 			const beaconContract = new ethers.Contract(
+// 				contractAddress,
+// 				UpgradeableBeaconABI,
+// 				deployer,
+// 			);
+// 			impl = await beaconContract.implementation();
+// 			log(
+// 				`- ${chalk.bold.blue(
+// 					contractName,
+// 				)} beacon address: ${chalk.bold.red(contractAddress)}`,
+// 			);
+// 		}
+// 		log("- Implementation:", chalk.bold.yellow(impl));
+// 	} else {
+// 		log(
+// 			`- ${chalk.bold.blue(contractName)} address: ${chalk.bold.yellow(
+// 				impl,
+// 			)}`,
+// 		);
+// 	}
+// 	log(
+// 		"- Account balance after deployment: ",
+// 		chalk.bold.yellowBright(
+// 			ethers.formatEther(await Provider.getBalance(deployer.address)),
+// 		),
+// 	);
+// 	log("====================================================");
+
+// 	return impl;
+// }
 
 async function writeDeploymentResult(
 	contractName: string,
@@ -155,8 +245,10 @@ async function writeDeploymentResult(
 		// Check if the file exists and create it if it doesn't.
 		await fs.promises.access(DeploymentStorage.File, fs.constants.F_OK);
 	} catch {
-        // Create the directory if it doesn't exist
-        await fs.promises.mkdir(path.dirname(DeploymentStorage.File), { recursive: true });
+		// Create the directory if it doesn't exist
+		await fs.promises.mkdir(path.dirname(DeploymentStorage.File), {
+			recursive: true,
+		});
 		// Create the file if it doesn't exist
 		await fs.promises.writeFile(DeploymentStorage.File, "{}");
 		log(
@@ -254,6 +346,39 @@ async function estimateDeploy(
 	return { factory, feeOverridingOpts };
 }
 
+function getProxyOptions(
+	isUpgradeable: boolean,
+	implConstructorArgs: FunctionArgs,
+	implForceDeploy: boolean,
+	feeOverridingOpts: FeeOverridingOptions,
+	deterministicOptions?: DeterministicOptions,
+): {
+	proxyOptions: StandaloneOptions;
+	deterministic?: DeterministicOptions;
+} {
+	const commonOptions: StandaloneOptions = {
+		constructorArgs:
+			implConstructorArgs.length > 0 ? implConstructorArgs : undefined,
+		redeployImplementation: implForceDeploy ? "always" : "onchange",
+		txOverrides: feeOverridingOpts,
+	};
+
+	const deterministic: DeterministicOptions =
+		DeployHelpers.getDeterministicOptions(deterministicOptions);
+
+	if (isUpgradeable) {
+		return {
+			proxyOptions: { ...DefaultProxyOptions, ...commonOptions },
+			deterministic,
+		};
+	} else {
+		return {
+			proxyOptions: {},
+			deterministic,
+		};
+	}
+}
+
 function getDeterministicOptions(
 	deterministicOpt: DeterministicOptions = {} as DeterministicOptions,
 ): DeterministicOptions {
@@ -273,12 +398,26 @@ function getDeterministicOptions(
 	};
 }
 
-async function getImplementationAddress(proxyAddress: Address): Promise<Address> {
+async function getImplementationAddress(
+	proxyAddress: Address,
+): Promise<Address> {
 	const impl = await Provider.getStorage(
 		proxyAddress,
 		ContractHelpers.erc1967Slot.Implementation(),
 	);
 	return ethers.AbiCoder.defaultAbiCoder().decode(["address"], impl)[0];
+}
+
+async function getBeaconImplementationAddress(
+	beaconAddress: Address,
+	deployer: Wallet | HardhatEthersSigner,
+): Promise<Address> {
+	const beaconContract = new ethers.Contract(
+		beaconAddress,
+		UpgradeableBeaconABI,
+		deployer,
+	);
+	return await beaconContract.implementation();
 }
 
 function sleep(ms: number): Promise<void> {
@@ -287,9 +426,12 @@ function sleep(ms: number): Promise<void> {
 
 export const DeployHelpers = {
 	printDeploymentTime,
-	printDeploymentResult,
+	printProxyUpgradeInfo,
 	writeDeploymentResult,
 	estimateDeploy,
+	getDeploymentResult,
 	getImplementationAddress,
+	getBeaconImplementationAddress,
+	getProxyOptions,
 	getDeterministicOptions,
 };

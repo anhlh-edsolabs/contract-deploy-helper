@@ -1,16 +1,15 @@
-import "@openzeppelin/hardhat-upgrades";
-import hre from "hardhat";
+import hre from "./core";
 import { StandaloneOptions } from "@openzeppelin/hardhat-upgrades/dist/utils/options";
 import { Contract, ContractFactory } from "ethers";
+
 import { ContractHelpers } from "../libs/contractHelpers";
 import { DeployHelpers } from "../libs/deployHelpers";
 import { Address, FunctionArgs } from "../types/abi";
 import {
     DeployOptions,
-    DeterministicOptions,
-    FeeOverridingOptions,
+    FeeOverridingOptions
 } from "../types/options";
-import { DefaultProxyOptions } from "./env";
+
 
 export async function deploy({
 	contractName,
@@ -23,7 +22,6 @@ export async function deploy({
 	deterministicOptions = undefined,
 }: DeployOptions): Promise<Contract> {
 	const [deployer] = await hre.ethers.getSigners();
-
 	await DeployHelpers.printDeploymentTime(deployer);
 
 	const { artifactName, deploymentName, factory, feeOverridingOpts } =
@@ -33,7 +31,7 @@ export async function deploy({
 		feeOverridingOpts.gasLimit = gasLimit;
 	}
 
-	const { proxyOptions } = getProxyOptions(
+	const { proxyOptions } = DeployHelpers.getProxyOptions(
 		isUpgradeable,
 		implConstructorArgs,
 		implForceDeploy,
@@ -53,8 +51,8 @@ export async function deploy({
 	);
 
 	const contractAddress = deployedContract.target as Address;
-	
-    const implAddress = await DeployHelpers.printDeploymentResult(
+
+	const implAddress = await DeployHelpers.getDeploymentResult(
 		deployer,
 		deploymentName || artifactName,
 		contractAddress,
@@ -87,39 +85,6 @@ async function getContractDetails(
 	return { artifactName, deploymentName, factory, feeOverridingOpts };
 }
 
-function getProxyOptions(
-	isUpgradeable: boolean,
-	implConstructorArgs: FunctionArgs,
-	implForceDeploy: boolean,
-	feeOverridingOpts: FeeOverridingOptions,
-	deterministicOptions?: DeterministicOptions,
-): {
-	proxyOptions: StandaloneOptions;
-	deterministic?: DeterministicOptions;
-} {
-	const commonOptions: StandaloneOptions = {
-		constructorArgs:
-			implConstructorArgs.length > 0 ? implConstructorArgs : undefined,
-		redeployImplementation: implForceDeploy ? "always" : "onchange",
-		txOverrides: feeOverridingOpts,
-	};
-
-	const deterministic: DeterministicOptions =
-		DeployHelpers.getDeterministicOptions(deterministicOptions);
-
-	if (isUpgradeable) {
-		return {
-			proxyOptions: { ...DefaultProxyOptions, ...commonOptions },
-			deterministic,
-		};
-	} else {
-		return {
-			proxyOptions: {},
-			deterministic,
-		};
-	}
-}
-
 async function deployContract(
 	factory: ContractFactory,
 	initializationArgs: FunctionArgs,
@@ -127,7 +92,7 @@ async function deployContract(
 	feeOverridingOpts: FeeOverridingOptions,
 	isUpgradeable: boolean,
 	options?: StandaloneOptions,
-    /// TODO: add deterministicOptions
+	/// TODO: add deterministicOptions
 	// deterministicOptions?: DeterministicOptions,
 ): Promise<Contract> {
 	if (isUpgradeable && options) {
