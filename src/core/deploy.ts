@@ -2,7 +2,7 @@ import hre from "./core";
 import { StandaloneOptions } from "@openzeppelin/hardhat-upgrades/dist/utils/options";
 import { Contract, ContractFactory } from "ethers";
 
-import { ContractHelpers } from "../libs/contractHelpers";
+import { Utils } from "../libs/utils";
 import { DeployHelpers } from "../libs/deployHelpers";
 import { Address, FunctionArgs } from "../types/abi";
 import {
@@ -76,7 +76,7 @@ async function getContractDetails(
 	constructorArgs: FunctionArgs,
 ) {
 	const { artifactName, deploymentName } =
-		ContractHelpers.abi.getContractName(contractName);
+		Utils.abi.getContractName(contractName);
 	const { factory, feeOverridingOpts } = await DeployHelpers.estimateDeploy(
 		artifactName,
 		constructorArgs,

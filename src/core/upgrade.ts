@@ -5,7 +5,7 @@ import {
 	UpgradeProxyOptions,
 } from "@openzeppelin/hardhat-upgrades/dist/utils/options";
 import { Contract, ContractFactory } from "ethers";
-import { ContractHelpers } from "../libs/contractHelpers";
+import { Utils } from "../libs/utils";
 import { DeployHelpers } from "../libs/deployHelpers";
 import { Address, FunctionArgs } from "../types/abi";
 import { UpgradeOptions } from "../types/options";
@@ -34,9 +34,9 @@ export async function upgrade({
 	}
 
 	const { artifactName: artifactNameV1, deploymentName: deploymentNameV1 } =
-		ContractHelpers.abi.getContractName(contractNameV1);
+		Utils.abi.getContractName(contractNameV1);
 	const { artifactName: artifactNameV2, deploymentName: deploymentNameV2 } =
-		ContractHelpers.abi.getContractName(contractNameV2);
+		Utils.abi.getContractName(contractNameV2);
 
 	const contractIdentifierV1 = deploymentNameV1 || artifactNameV1;
 	const contractIdentifierV2 = deploymentNameV2 || artifactNameV2;
@@ -48,7 +48,7 @@ export async function upgrade({
 
 	const { factory: factoryV2, feeOverridingOpts } =
 		await DeployHelpers.estimateDeploy(
-			contractIdentifierV1,
+			contractIdentifierV2,
 			implConstructorArgs,
 		);
 
@@ -72,7 +72,7 @@ export async function upgrade({
 		proxyOptions,
 	);
 
-	const implAddress = await DeployHelpers.getDeploymentResult(
+    const implAddress = await DeployHelpers.getDeploymentResult(
 		deployer,
 		contractIdentifierV1,
 		proxyAddress,

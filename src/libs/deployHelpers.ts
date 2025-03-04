@@ -2,8 +2,9 @@ import fs from "fs";
 import path from "path";
 import chalk from "chalk";
 
-import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { ethers, Wallet, ContractFactory } from "ethers";
+import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import { StandaloneOptions } from "@openzeppelin/hardhat-upgrades/dist/utils/options";
 import { log } from "console";
 
 import hre from "../core/core";
@@ -17,12 +18,12 @@ import {
 	DefaultProxyOptions,
 } from "../core/env";
 
-import { ContractHelpers } from "./contractHelpers";
 import { DeterministicOptions, FeeOverridingOptions } from "../types/options";
 
-import UpgradeableBeaconABI from "../core/abis/UpgradeableBeacon_ABI.json";
 import { Address, FunctionArgs } from "../types/abi";
-import { StandaloneOptions } from "@openzeppelin/hardhat-upgrades/dist/utils/options";
+
+import { StorageHelpers } from "./storageHelpers";
+
 
 async function printDeploymentTime(
 	deployer: Wallet | HardhatEthersSigner,
@@ -48,7 +49,7 @@ async function printProxyUpgradeInfo(
 	proxyAddress: Address,
 	contractIdentifier: string,
 ): Promise<Address> {
-	const impl = await getImplementationAddress(proxyAddress);
+	const impl = await StorageHelpers.getImplementationAddress(proxyAddress);
 	log(
 		`Upgrading ${chalk.bold.blue(
 			contractIdentifier,
@@ -73,8 +74,8 @@ async function getDeploymentResult(
 	let implementationAddress = contractAddress;
 	if (isUpgrade) {
 		implementationAddress = isBeacon
-			? await getBeaconImplementationAddress(contractAddress, deployer)
-			: await getImplementationAddress(contractAddress);
+			? await StorageHelpers.getBeaconImplementationAddress(contractAddress)
+			: await StorageHelpers.getImplementationAddress(contractAddress);
 	}
 
 	await logDeploymentResult(
@@ -130,60 +131,6 @@ async function logDeploymentResult(
 	);
 	log("====================================================");
 }
-
-// async function printDeploymentResult(
-// 	deployer: Wallet | HardhatEthersSigner,
-// 	contractName: string,
-// 	contractAddress: Address,
-// 	isUpgrade = false,
-// 	isBeacon = false,
-// ): Promise<string> {
-// 	// wait for 3 seconds before fetching the implementation address
-// 	await sleep(3000);
-
-// 	let impl = contractAddress;
-
-// 	log("====================================================");
-// 	log("COMPLETED.");
-// 	if (isUpgrade) {
-// 		if (!isBeacon) {
-// 			impl = await getImplementationAddress(contractAddress);
-// 			log(
-// 				`- ${chalk.bold.blue(
-// 					contractName,
-// 				)} proxy address: ${chalk.bold.red(contractAddress)}`,
-// 			);
-// 		} else {
-// 			const beaconContract = new ethers.Contract(
-// 				contractAddress,
-// 				UpgradeableBeaconABI,
-// 				deployer,
-// 			);
-// 			impl = await beaconContract.implementation();
-// 			log(
-// 				`- ${chalk.bold.blue(
-// 					contractName,
-// 				)} beacon address: ${chalk.bold.red(contractAddress)}`,
-// 			);
-// 		}
-// 		log("- Implementation:", chalk.bold.yellow(impl));
-// 	} else {
-// 		log(
-// 			`- ${chalk.bold.blue(contractName)} address: ${chalk.bold.yellow(
-// 				impl,
-// 			)}`,
-// 		);
-// 	}
-// 	log(
-// 		"- Account balance after deployment: ",
-// 		chalk.bold.yellowBright(
-// 			ethers.formatEther(await Provider.getBalance(deployer.address)),
-// 		),
-// 	);
-// 	log("====================================================");
-
-// 	return impl;
-// }
 
 async function writeDeploymentResult(
 	contractName: string,
@@ -398,28 +345,6 @@ function getDeterministicOptions(
 	};
 }
 
-async function getImplementationAddress(
-	proxyAddress: Address,
-): Promise<Address> {
-	const impl = await Provider.getStorage(
-		proxyAddress,
-		ContractHelpers.erc1967Slot.Implementation(),
-	);
-	return ethers.AbiCoder.defaultAbiCoder().decode(["address"], impl)[0];
-}
-
-async function getBeaconImplementationAddress(
-	beaconAddress: Address,
-	deployer: Wallet | HardhatEthersSigner,
-): Promise<Address> {
-	const beaconContract = new ethers.Contract(
-		beaconAddress,
-		UpgradeableBeaconABI,
-		deployer,
-	);
-	return await beaconContract.implementation();
-}
-
 function sleep(ms: number): Promise<void> {
 	return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -430,8 +355,6 @@ export const DeployHelpers = {
 	writeDeploymentResult,
 	estimateDeploy,
 	getDeploymentResult,
-	getImplementationAddress,
-	getBeaconImplementationAddress,
 	getProxyOptions,
 	getDeterministicOptions,
 };

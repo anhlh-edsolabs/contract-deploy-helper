@@ -130,7 +130,7 @@ function hexToString(hexString: string): string {
 	return ethers.toUtf8String(hexString).replace(/(\x00)/g, "");
 }
 
-export const ContractHelpers = {
+export const Utils = {
 	erc7201,
 	erc1967Slot: {
 		Implementation: erc1967ImplSlot,
