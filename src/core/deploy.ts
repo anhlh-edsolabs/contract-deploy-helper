@@ -1,15 +1,12 @@
-import hre from "./core";
+import hh from "./core";
 import { StandaloneOptions } from "@openzeppelin/hardhat-upgrades/dist/utils/options";
 import { Contract, ContractFactory } from "ethers";
 
-import { Utils } from "../libs/utils";
-import { DeployHelpers } from "../libs/deployHelpers";
+import { EncodingUtils } from "../libs/encodingUtils";
+import { Deployer } from "./env";
+import { DeploymentUtils } from "../libs/deploymentUtils";
 import { Address, FunctionArgs } from "../types/abi";
-import {
-    DeployOptions,
-    FeeOverridingOptions
-} from "../types/options";
-
+import { DeployOptions, FeeOverridingOptions } from "../types/options";
 
 export async function deploy({
 	contractName,
@@ -21,8 +18,9 @@ export async function deploy({
 	gasLimit = 0,
 	deterministicOptions = undefined,
 }: DeployOptions): Promise<Contract> {
-	const [deployer] = await hre.ethers.getSigners();
-	await DeployHelpers.printDeploymentTime(deployer);
+	// const [deployer] = await hre.ethers.getSigners();
+	const deployer = await Deployer();
+	await DeploymentUtils.printDeploymentTime(deployer);
 
 	const { artifactName, deploymentName, factory, feeOverridingOpts } =
 		await getContractDetails(contractName, implConstructorArgs);
@@ -31,7 +29,7 @@ export async function deploy({
 		feeOverridingOpts.gasLimit = gasLimit;
 	}
 
-	const { proxyOptions } = DeployHelpers.getProxyOptions(
+	const { proxyOptions } = DeploymentUtils.getProxyOptions(
 		isUpgradeable,
 		implConstructorArgs,
 		implForceDeploy,
@@ -52,7 +50,7 @@ export async function deploy({
 
 	const contractAddress = deployedContract.target as Address;
 
-	const implAddress = await DeployHelpers.getDeploymentResult(
+	const implAddress = await DeploymentUtils.getDeploymentResult(
 		deployer,
 		deploymentName || artifactName,
 		contractAddress,
@@ -60,7 +58,7 @@ export async function deploy({
 	);
 
 	if (writeDeploymentResult) {
-		await DeployHelpers.writeDeploymentResult(
+		await DeploymentUtils.writeDeploymentResult(
 			deploymentName ? `${artifactName}${deploymentName}` : artifactName,
 			implAddress,
 			initializationArgs,
@@ -76,8 +74,8 @@ async function getContractDetails(
 	constructorArgs: FunctionArgs,
 ) {
 	const { artifactName, deploymentName } =
-		Utils.abi.getContractName(contractName);
-	const { factory, feeOverridingOpts } = await DeployHelpers.estimateDeploy(
+		EncodingUtils.abi.getContractName(contractName);
+	const { factory, feeOverridingOpts } = await DeploymentUtils.estimateDeploy(
 		artifactName,
 		constructorArgs,
 	);
@@ -97,9 +95,9 @@ async function deployContract(
 ): Promise<Contract> {
 	if (isUpgradeable && options) {
 		/// TODO: process deterministic deployment
-		return (await (
-			await hre.upgrades.deployProxy(factory, initializationArgs, options)
-		).waitForDeployment()) as Contract;
+		const proxyDeployment = await hh.upgrades.deployProxy(factory, initializationArgs, options);
+		const proxy = await proxyDeployment.waitForDeployment();
+		return proxy as Contract;
 	} else {
 		/// TODO: process deterministic deployment
 		return (await (

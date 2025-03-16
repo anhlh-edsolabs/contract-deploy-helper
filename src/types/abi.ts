@@ -1,3 +1,5 @@
+import { Addressable } from "ethers";
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export interface AbiIO {
     internalType: string;
@@ -24,4 +26,4 @@ export type FunctionArgs = (
 	| any[]
 )[];
 
-export type Address = `0x${string}`;
+export type Address = `0x${string}` | string | Addressable;

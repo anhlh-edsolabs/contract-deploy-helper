@@ -22,7 +22,7 @@ import { DeterministicOptions, FeeOverridingOptions } from "../types/options";
 
 import { Address, FunctionArgs } from "../types/abi";
 
-import { StorageHelpers } from "./storageHelpers";
+import { StorageUtils } from "./storageUtils";
 
 
 async function printDeploymentTime(
@@ -49,7 +49,7 @@ async function printProxyUpgradeInfo(
 	proxyAddress: Address,
 	contractIdentifier: string,
 ): Promise<Address> {
-	const impl = await StorageHelpers.getImplementationAddress(proxyAddress);
+	const impl = await StorageUtils.getImplementationAddress(proxyAddress);
 	log(
 		`Upgrading ${chalk.bold.blue(
 			contractIdentifier,
@@ -69,13 +69,13 @@ async function getDeploymentResult(
 	isBeacon?: boolean,
 ): Promise<Address> {
 	// wait for 3 seconds before fetching the implementation address
-	await sleep(3000);
+	// await sleep(3000);
 
 	let implementationAddress = contractAddress;
 	if (isUpgrade) {
 		implementationAddress = isBeacon
-			? await StorageHelpers.getBeaconImplementationAddress(contractAddress)
-			: await StorageHelpers.getImplementationAddress(contractAddress);
+			? await StorageUtils.getBeaconImplementationAddress(contractAddress)
+			: await StorageUtils.getImplementationAddress(contractAddress);
 	}
 
 	await logDeploymentResult(
@@ -98,8 +98,8 @@ async function logDeploymentResult(
 	isUpgrade?: boolean,
 	isBeacon?: boolean,
 ): Promise<void> {
-	log("====================================================");
-	log("COMPLETED.");
+	log("====================================================\n\r");
+	log("DEPLOYMENT COMPLETED:");
 
 	if (isUpgrade) {
 		if (!isBeacon) {
@@ -124,7 +124,7 @@ async function logDeploymentResult(
 		);
 	}
 	log(
-		" - Account balance after deployment: ",
+		"- Account balance after deployment: ",
 		chalk.bold.yellowBright(
 			ethers.formatEther(await Provider.getBalance(deployerAddress)),
 		),
@@ -134,11 +134,11 @@ async function logDeploymentResult(
 
 async function writeDeploymentResult(
 	contractName: string,
-	implementationAddress: string,
+	implementationAddress: Address,
 	initializationArgs: FunctionArgs = [],
-	proxyAddress: string | null = null,
-	beaconAddress: string | null = null,
-	previousImplAddress: string | null = null,
+	proxyAddress: Address | null = null,
+	beaconAddress: Address | null = null,
+	previousImplAddress: Address | null = null,
 	previousContractName: string = contractName,
 	isProxyUpgrade: boolean = false,
 ): Promise<void> {
@@ -311,7 +311,7 @@ function getProxyOptions(
 	};
 
 	const deterministic: DeterministicOptions =
-		DeployHelpers.getDeterministicOptions(deterministicOptions);
+		DeploymentUtils.getDeterministicOptions(deterministicOptions);
 
 	if (isUpgradeable) {
 		return {
@@ -349,7 +349,7 @@ function sleep(ms: number): Promise<void> {
 	return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export const DeployHelpers = {
+export const DeploymentUtils = {
 	printDeploymentTime,
 	printProxyUpgradeInfo,
 	writeDeploymentResult,

@@ -5,8 +5,8 @@ import {
 	UpgradeProxyOptions,
 } from "@openzeppelin/hardhat-upgrades/dist/utils/options";
 import { Contract, ContractFactory } from "ethers";
-import { Utils } from "../libs/utils";
-import { DeployHelpers } from "../libs/deployHelpers";
+import { EncodingUtils } from "../libs/encodingUtils";
+import { DeploymentUtils } from "../libs/deploymentUtils";
 import { Address, FunctionArgs } from "../types/abi";
 import { UpgradeOptions } from "../types/options";
 import { Constants, DeploymentStorage } from "./env";
@@ -25,7 +25,7 @@ export async function upgrade({
 	deterministicOptions = undefined,
 }: UpgradeOptions): Promise<Contract> {
 	const [deployer] = await hre.ethers.getSigners();
-	await DeployHelpers.printDeploymentTime(deployer);
+	await DeploymentUtils.printDeploymentTime(deployer);
 
 	const proxyAddress = envData[contractNameV1].Proxy as Address;
 
@@ -34,20 +34,20 @@ export async function upgrade({
 	}
 
 	const { artifactName: artifactNameV1, deploymentName: deploymentNameV1 } =
-		Utils.abi.getContractName(contractNameV1);
+		EncodingUtils.abi.getContractName(contractNameV1);
 	const { artifactName: artifactNameV2, deploymentName: deploymentNameV2 } =
-		Utils.abi.getContractName(contractNameV2);
+		EncodingUtils.abi.getContractName(contractNameV2);
 
 	const contractIdentifierV1 = deploymentNameV1 || artifactNameV1;
 	const contractIdentifierV2 = deploymentNameV2 || artifactNameV2;
 
-	const previousImpl = await DeployHelpers.printProxyUpgradeInfo(
+	const previousImpl = await DeploymentUtils.printProxyUpgradeInfo(
 		proxyAddress,
 		contractIdentifierV1,
 	);
 
 	const { factory: factoryV2, feeOverridingOpts } =
-		await DeployHelpers.estimateDeploy(
+		await DeploymentUtils.estimateDeploy(
 			contractIdentifierV2,
 			implConstructorArgs,
 		);
@@ -56,7 +56,7 @@ export async function upgrade({
 		feeOverridingOpts.gasLimit = gasLimit;
 	}
 
-	const { proxyOptions } = DeployHelpers.getProxyOptions(
+	const { proxyOptions } = DeploymentUtils.getProxyOptions(
 		true, // isUpgradeable
 		implConstructorArgs,
 		implForceDeploy,
@@ -72,7 +72,7 @@ export async function upgrade({
 		proxyOptions,
 	);
 
-    const implAddress = await DeployHelpers.getDeploymentResult(
+    const implAddress = await DeploymentUtils.getDeploymentResult(
 		deployer,
 		contractIdentifierV1,
 		proxyAddress,
@@ -80,7 +80,7 @@ export async function upgrade({
 	);
 
 	if (writeDeploymentResult) {
-		await DeployHelpers.writeDeploymentResult(
+		await DeploymentUtils.writeDeploymentResult(
 			contractIdentifierV2,
 			implAddress,
 			[],

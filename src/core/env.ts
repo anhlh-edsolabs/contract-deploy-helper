@@ -6,12 +6,14 @@ import fs from "fs";
 import path from "path";
 
 import {
-    DeployBeaconProxyOptions,
-    DeployProxyOptions
+	DeployBeaconProxyOptions,
+	DeployProxyOptions,
 } from "@openzeppelin/hardhat-upgrades/dist/utils/options";
 
 import { DeploymentDataType } from "../types/deploymentData";
 import { DeterministicOptions } from "../types/options";
+import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import { HardhatEthersProvider } from "@nomicfoundation/hardhat-ethers/internal/hardhat-ethers-provider";
 
 config();
 
@@ -40,12 +42,23 @@ const DeploymentData: DeploymentDataType =
 		? JSON.parse(fs.readFileSync(DEPLOYMENT_FILE, "utf8"))
 		: {};
 
-export const Provider = new ethers.JsonRpcProvider(RPC_URL, undefined, {
-	polling: POLLING_ENABLED,
-	pollingInterval: POLLING_INTERVAL,
-});
+function getProvider(): ethers.JsonRpcProvider | HardhatEthersProvider {
+	const provider = RPC_URL ? new ethers.JsonRpcProvider(RPC_URL, undefined, {
+		polling: POLLING_ENABLED,
+		pollingInterval: POLLING_INTERVAL,
+	}) : hre.ethers.provider;
+	return provider;
+}
 
-export const Deployer = new ethers.Wallet(DEPLOYER_PK, Provider);
+export const Provider = getProvider();
+
+export async function Deployer(): Promise<ethers.Wallet | HardhatEthersSigner> {
+	// return new ethers.Wallet(DEPLOYER_PK, Provider);
+	const deployer = DEPLOYER_PK
+		? new ethers.Wallet(DEPLOYER_PK, Provider)
+		: (await hre.ethers.getSigners())[0];
+	return deployer;
+}
 
 export const CoinBase = async (): Promise<string> => {
 	const chainID = parseInt((await Provider.getNetwork()).chainId.toString());
@@ -84,7 +97,7 @@ export const DefaultBeaconOptions: DeployBeaconProxyOptions = {
 };
 
 export const DefaultDeterministicOptions: DeterministicOptions = {
-    useDeterministicDeployment: true,
+	useDeterministicDeployment: true,
 	salt: "0x0000000000000000000000000000000000000000000000000000000000000000",
 };
 

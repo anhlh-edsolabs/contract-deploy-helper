@@ -1,4 +1,4 @@
-import hre from "hardhat";
+import * as hh from "hardhat";
 import "@openzeppelin/hardhat-upgrades";
 
-export default hre;
+export default hh;

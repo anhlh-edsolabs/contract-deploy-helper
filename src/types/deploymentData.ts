@@ -1,12 +1,12 @@
-import { FunctionArgs } from "./abi";
+import { Address, FunctionArgs } from "./abi";
 
 export interface DeploymentItem {
 	ChainID: number;
-	Proxy: string | null;
-	Beacon: string | null;
-	Impl: string;
+	Proxy: Address | null;
+	Beacon: Address | null;
+	Impl: Address;
 	InitializationArgs: FunctionArgs;
-	PreviousImplementations?: string[];
+	PreviousImplementations?: Address[];
 	PreviousContractNames?: string[];
 }
 

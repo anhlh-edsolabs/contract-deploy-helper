@@ -3,12 +3,12 @@ import { upgrade } from "./core/upgrade";
 
 import { Deployer, Provider } from "./core/env";
 
-import { Utils } from "./libs/utils";
+import { EncodingUtils } from "./libs/encodingUtils";
 
 export const DeployHelper = {
 	deploy,
 	upgrade,
-	Utils,
+	Utils: EncodingUtils,
 	Env: {
 		Deployer,
 		Provider,
