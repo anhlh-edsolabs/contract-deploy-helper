@@ -5,7 +5,7 @@ node_modules
 .env
 
 # Hardhat files
-/cache
+/tests/cache
 /tests/artifacts
 
 # TypeChain files
