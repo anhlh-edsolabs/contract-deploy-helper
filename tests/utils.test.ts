@@ -1,26 +1,28 @@
 import { expect } from "chai";
-import { EncodingUtils } from "../src/libs/encodingUtils";
 import { AbiIO } from "../src/types/abi";
+import { AbiUtils } from "../src/libs/abiUtils";
+import { StorageUtils } from "../src/libs/storageUtils";
+import { EncodingUtils } from "../src/libs/encodingUtils";
 
 describe("Utils", () => {
 	
 	describe("erc1967Slot", () => {
 		it("should compute the correct implementation slot", () => {
-			const result = EncodingUtils.erc1967Slot.Implementation();
+			const result = StorageUtils.erc1967.Implementation();
 			expect(result).to.deep.eq(
 				"0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc",
 			);
 		});
 
 		it("should compute the correct beacon slot", () => {
-			const result = EncodingUtils.erc1967Slot.Beacon();
+			const result = StorageUtils.erc1967.Beacon();
 			expect(result).to.deep.eq(
 				"0xa3f0ad74e5423aebfd80d3ef4346578335a9a72aeaee59ff6cb3582b35133d50",
 			);
 		});
 
 		it("should compute the correct admin slot", () => {
-			const result = EncodingUtils.erc1967Slot.Admin();
+			const result = StorageUtils.erc1967.Admin();
 			expect(result).to.deep.eq(
 				"0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103",
 			);
@@ -30,7 +32,7 @@ describe("Utils", () => {
 	describe("erc7201", () => {
 		it("should compute the correct ERC7201 storage namespace hash", () => {
 			const namespaceId = "namespaceId";
-			const result = EncodingUtils.erc7201(namespaceId);
+			const result = StorageUtils.erc7201(namespaceId);
 			expect(result).to.deep.eq(
 				"0x2e3a922aba140d04fc09508dc403314f2c850f80b05481d295263d41370a6500",
 			);
@@ -52,7 +54,7 @@ describe("Utils", () => {
 						internalType: "address",
 					},
 				];
-				const result = EncodingUtils.abi.iterateInputs(inputs);
+				const result = AbiUtils.iterateInputs(inputs);
 				expect(result).to.deep.eq("uint256,address");
 			});
 
@@ -76,7 +78,7 @@ describe("Utils", () => {
 						],
 					},
 				];
-				const result = EncodingUtils.abi.iterateInputs(inputs);
+				const result = AbiUtils.iterateInputs(inputs);
 				expect(result).to.deep.eq("tuple(uint256,address)");
 			});
 
@@ -100,7 +102,7 @@ describe("Utils", () => {
 						],
 					},
 				];
-				const result = EncodingUtils.abi.iterateInputs(inputs);
+				const result = AbiUtils.iterateInputs(inputs);
 				expect(result).to.deep.eq("tuple(uint256,address)[]");
 			});
 
@@ -131,14 +133,14 @@ describe("Utils", () => {
 						],
 					},
 				];
-				const result = EncodingUtils.abi.iterateInputs(inputs);
+				const result = AbiUtils.iterateInputs(inputs);
 				expect(result).to.deep.eq("tuple(tuple(uint256,address))");
 			});
 		});
 
 		describe("getContractName", () => {
 			it("should return artifact name and empty deployment name", () => {
-				const result = EncodingUtils.abi.getContractName("MyContract");
+				const result = AbiUtils.getContractName("MyContract");
 				expect(result).to.deep.eq({
 					artifactName: "MyContract",
 					deploymentName: "",
@@ -146,7 +148,7 @@ describe("Utils", () => {
 			});
 
 			it("should return artifact name and deployment name", () => {
-				const result = EncodingUtils.abi.getContractName(
+				const result = AbiUtils.getContractName(
 					"MyContract$MyDeployment",
 				);
 				expect(result).to.deep.eq({
@@ -156,7 +158,7 @@ describe("Utils", () => {
 			});
 
 			it("should trim whitespace", () => {
-				const result = EncodingUtils.abi.getContractName(
+				const result = AbiUtils.getContractName(
 					"  MyContract  $  MyDeployment  ",
 				);
 				expect(result).to.deep.eq({

@@ -2,11 +2,11 @@ import hh from "./core";
 import { StandaloneOptions } from "@openzeppelin/hardhat-upgrades/dist/utils/options";
 import { Contract, ContractFactory } from "ethers";
 
-import { EncodingUtils } from "../libs/encodingUtils";
 import { Deployer } from "./env";
 import { DeploymentUtils } from "../libs/deploymentUtils";
 import { Address, FunctionArgs } from "../types/abi";
 import { DeployOptions, FeeOverridingOptions } from "../types/options";
+import { AbiUtils } from "../libs/abiUtils";
 
 export async function deploy({
 	contractName,
@@ -74,7 +74,7 @@ async function getContractDetails(
 	constructorArgs: FunctionArgs,
 ) {
 	const { artifactName, deploymentName } =
-		EncodingUtils.abi.getContractName(contractName);
+		AbiUtils.getContractName(contractName);
 	const { factory, feeOverridingOpts } = await DeploymentUtils.estimateDeploy(
 		artifactName,
 		constructorArgs,
