@@ -37,3 +37,5 @@ node_modules
 # Hardhat Ignition default folder for deployments against a local node
 ignition/deployments/chain-31337
 
+# SpecStory explanation file
+.specstory/.what-is-this.md
