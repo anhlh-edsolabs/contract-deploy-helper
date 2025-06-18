@@ -148,6 +148,7 @@ async function writeDeploymentResult(
 	if (isProxyUpgrade) {
 		if (contractName != previousContractName) {
 			// deep cloning the object for previous contract
+			// TODO: use deepCloneWithBigInt instead of JSON.parse(JSON.stringify())
 			envData[contractName] = JSON.parse(
 				JSON.stringify(envData[previousContractName]),
 			);
